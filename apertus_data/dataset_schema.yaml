@@ -1,0 +1,258 @@
+$schema: http://json-schema.org/draft-07/schema#
+title: Apertus Dataset Metadata Schema
+description: |
+  Official YAML schema for dataset entries in the `apertus_data` catalogue.
+  All files must be stored as `apertus_data/catalogue/[dataset_id].yaml`.
+
+  **YAML Style Rules (mandatory)**:
+  - Use **2-space indentation** only, no tabs.
+  - Lists (`- item`) must be indented under their parent key.
+  - Strings containing special characters or starting with punctuation must be quoted.
+
+type: object
+additionalProperties: false
+
+required:
+  - owner
+  - name
+  - tags
+  - modalities
+  - licenses
+  - formats
+  - id
+  - build_requirements
+  - build_history
+  - usage_history
+
+properties:
+
+  # ==================== IDENTIFICATION ====================
+  url:
+    type: [ string, "null" ]
+    description: |
+      Clean, canonical URL to the original dataset (without query parameters, fragments, or file paths). 
+      Examples
+      - ✅ https://huggingface.co/datasets/LLM360/MegaMath
+      - ✅ https://zenodo.org/records/1234567
+      - ❌ https://huggingface.co/datasets/LLM360/MegaMath?ref=main
+      - ❌ https://huggingface.co/datasets/LLM360/MegaMath/blob/main/data.jsonl.
+      Use null for fully internal/generated datasets with no public source URL.
+    pattern: "^(https?://[^?#%\\s&]+)?$"
+    examples:
+      - https://huggingface.co/datasets/LLM360/MegaMath
+      - null ]
+
+
+  owner:
+    type: string
+    description: |
+      Owner or organization responsible for the dataset.
+      - Hugging Face / GitHub: username or organization (e.g. "LLM360")
+      - Other platforms: platform name (e.g. "zenodo")
+      - Internally generated: "swiss-ai"
+    pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+    minLength: 1
+    examples:
+      - LLM360
+      - zenodo
+      - swiss-ai
+
+  name:
+    type: string
+    description: Official or primary name of the dataset.
+    minLength: 1
+    examples:
+      - MegaMath
+      - FineWeb-Edu
+
+  # Todo: version and commit hash could be two different fields.
+  version:
+    type: string
+    nullable: true
+    description: |
+      Version identifier of the dataset. 
+      - Version-controlled sources (HF, GitHub): commit hash
+      - Explicit releases: version string (replace spaces with underscores)
+      - Leave null if no meaningful version exists.
+    pattern: "^[a-zA-Z0-9._-]*$"
+    examples:
+      - a1b2c3d4e5f67890
+      - v1.01
+      - version_2
+      - null
+
+  # ==================== METADATA ====================
+  tags:
+    type: array
+    description: |
+      Tags describing the dataset's purpose, domain, and intended ML use case.
+    items:
+      type: string
+      enum:
+        - reinforcement learning
+        - supervised fine-tuning
+        - preference
+        - alignment
+        - pre-training
+        - long context
+        - question answering
+        - math
+        - knowledge recall
+        - code
+        - reasoning
+        - medical
+        - multilingual
+        - safety
+        - table
+        - system prompt
+        - chemistry
+        - topic following
+        - music
+        - multi-turn
+        - physics
+        - function calling
+        - controversy
+        - politics
+        - history
+        - legal
+        - news
+        - finance
+        - instruction following
+        - truthfulness
+    uniqueItems: true
+    minItems: 1
+
+  modalities:
+    type: array
+    description: Data modalities present in the dataset.
+    items:
+      type: string
+      enum:
+        - text
+        - audio
+        - image
+    uniqueItems: true
+    minItems: 1
+
+  languages:
+    type: array
+    description: |
+      Languages present using ISO 639-1 codes.
+      Use "multilingual" or "european" when appropriate.
+    items:
+      type: string
+    uniqueItems: true
+
+  # todo : this could be a drop-down with a free-text "other" option.
+  licenses:
+    type: array
+    description: |
+      License(s) of the dataset. Must be written in lowercase only.
+      Use standard SPDX identifiers when possible.
+      Examples: "cc-by-nc 4.0", "mit", "apache-2.0", "cc0-1.0", "gpl-3.0"
+    items:
+      type: string
+      pattern: "^[a-z0-9. -]+$"
+    minItems: 1
+    uniqueItems: true
+    examples:
+      - cc-by-nc 4.0
+      - mit
+      - apache-2.0
+      - cc0-1.0
+      - gpl-3.0
+
+  formats:
+    type: array
+    description: |
+      File formats present in the final dataset (include the leading dot).
+    items:
+      type: string
+      pattern: "^\\.[a-z0-9]+$"
+    minItems: 1
+    uniqueItems: true
+    examples: [ [ ".parquet" ], [ ".jsonl", ".parquet" ] ]
+
+  notes:
+    type: string
+    nullable: true
+    description: |
+      Free-text notes or important remarks about the dataset.
+
+  # ==================== AUTOMATIC FIELDS ====================
+  id:
+    type: string
+    description: |
+      Deterministic unique identifier for this dataset (auto-generated).
+      Do not edit manually.
+    minLength: 1
+
+  # ==================== BUILD INFORMATION ====================
+  build_requirements:
+    type: object
+    description: |
+      Instructions and provenance for how this dataset was (or should be) built.
+    additionalProperties: false
+    required:
+      - source_datasets_ids
+    properties:
+      source_datasets_ids:
+        type: array
+        description: |
+          List of internal dataset `id` values this one depends on.
+          Use an empty list for original/raw datasets.
+        items:
+          type: string
+        minItems: 0
+
+      # Todo: change this
+      build_script_url:
+        type: [ string, "null" ]
+        description: URL to the processing script used. Null for raw datasets without a build script.
+        pattern: "^https://github.com/sven-nm/apertus_data/builders/"
+
+      build_script_commit:
+        type: [ string, "null" ]
+        description: Git commit hash (40 characters) of the processing script used. Null for raw datasets.
+        pattern: "^[0-9a-f]{40}$"
+
+  build_history:
+    type: array
+    description: History of builds of this dataset.
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - datetime
+        - username
+      properties:
+        datetime:
+          type: string
+          description: Date and time when this build was created.
+          format: date-time
+          examples: [ "2026-05-12T14:30:00Z" ]
+        username:
+          type: string
+          description: GitHub username of the person who triggered the build.
+
+  # ==================== USAGE TRACKING ====================
+  usage_history:
+    type: array
+    description: Record of where and how this dataset has been used.
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - date
+        - username
+      properties:
+        name:
+          type: string
+          description: Identifier for this usage (e.g. "v1_pretraining", "experiment_foo").
+        date:
+          type: string
+          format: date-time
+        username:
+          type: string
+          description: GitHub username of the person who used the dataset.
