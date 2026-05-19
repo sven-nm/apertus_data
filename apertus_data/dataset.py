@@ -4,13 +4,13 @@
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from builders.default_hf_download import hf_transfer_download
 
 import yaml
 
+from apertus_data import build
 from apertus_data import constants as cs
-from apertus_data.utils import get_logger
 from apertus_data import utils
+from apertus_data.utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -21,27 +21,17 @@ class Dataset:
     def __init__(self, **kwargs) -> None:
         """Initialize from a parsed catalogue entry."""
 
-        self.yaml_attrs = []
+        # Todo: clean this (-> Pydantic BaseModel or dataclass) and validate against schema ?
         for key, value in kwargs.items():
+            # Quick and dirty hack for paths
+            if key.endswith('_dir') or key.endswith('_path'):
+                value = Path(value)
             setattr(self, key, value)
-            self.yaml_attrs.append(key)
-
-        # Set the local root dir
-        self.local_root_dir: Path = cs.DATA_DIR / self.id
-        self.yaml_attrs.append('local_root_dir')
-
-        # Set data, logs and hash dirs
-        for key in ['data', 'logs', 'hashes']:
-            setattr(self, f'local_{key}_dir', self.local_root_dir / key)
-            self.yaml_attrs.append(f'local_{key}_dir')
 
         self.yaml_path: Path = cs.CATALOGUE_DIR / f'{self.id}.yaml'
 
         self.is_hf_dataset: bool = self.url.startswith('https://huggingface.co/datasets')
 
-        if 'downloads' not in kwargs:
-            self.downloads: list[dict] = []
-            self.yaml_attrs.append('downloads')
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> 'Dataset':
@@ -56,14 +46,14 @@ class Dataset:
     def to_yaml(self) -> None:
         """Write the dataset to a catalogue YAML file."""
         yaml_dict = {k: getattr(self, k) if not isinstance(getattr(self, k), Path) else str(getattr(self, k))
-                     for k in self.yaml_attrs}
+                     for k in cs.YAML_KEYS if hasattr(self, k)}
 
         self.yaml_path.write_text(yaml.safe_dump(yaml_dict), encoding='utf-8')
 
     def get_local_commit(self) -> str:
         """Get the commit hash of the local dataset, read from on-disk metadata."""
         if self.is_hf_dataset:
-            hf_metadata_path = self.local_data_dir / '.cache/huggingface/download/.gitattributes.metadata'
+            hf_metadata_path = self.data_dir / '.cache/huggingface/download/.gitattributes.metadata'
             if not hf_metadata_path.exists():
                 raise FileNotFoundError(
                     f"Huggingface metadata file not found at {hf_metadata_path}; "
@@ -74,82 +64,83 @@ class Dataset:
             raise NotImplementedError
 
 
-    def download(self, force_download: bool = False) -> None:
-        """Download the dataset to ``self.local_data_dir`` and record the build.
+    def build(self, force: bool = False) -> None:
+        """Build the dataset by running its pinned ``main()`` build script.
 
-        Note:
-            The method verifies that the dataset is not already downloaded (unless
-            ``force_download`` is True), checks that the download script is committed
-            and pushed to git origin, optionally wipes the existing local data,
-            runs the download, hashes the result, and appends a build entry to the
-            catalogue YAML.
+        Flow:
+        1. Verify ``build_requirements.build_script_url`` exists on GitHub at
+           ``build_requirements.build_script_commit`` (HEAD on raw URL).
+        2. Verify the local script is at that commit (or check it out from
+           file history if it isn't); raise if the commit isn't in history.
+        3. Import the script and validate ``main()``'s signature.
+        4. Check ``force`` and :meth:`_is_already_built`; wipe ``data_dir``
+           if ``force`` is set.
+        5. Run ``main(output_dir=data_dir, logs_dir=logs_dir)`` under
+           :func:`build.run_builder`'s contract (log handler attached,
+           non-empty output asserted).
+        6. Hash the produced files and append a build_history entry, then
+           persist to YAML.
 
         Args:
-            force_download: If True, wipe any existing local data and redownload
-                even when the dataset already appears to be present.
+            force: If True, wipe ``self.data_dir`` and re-run even when the
+                dataset already appears built at the requested commit.
         """
-        if not force_download and self._is_already_downloaded():
+        req = getattr(self, 'build_requirements', None) or {}
+        url, commit = req.get('build_script_url'), req.get('build_script_commit')
+        if not url or not commit:
+            raise AttributeError(
+                f"Dataset {self.id!r} has no build_script_url/commit in build_requirements."
+            )
+
+        main_fn = build.prepare_builder(url, commit)
+
+        if not force and self._is_already_built():
             raise ValueError(
-                f"Dataset {self.id} is already downloaded at {self.local_data_dir} and force_download=False."
-                " Use force_download=True to overwrite."
+                f"Dataset {self.id} is already built at {self.data_dir}. "
+                f"Use force=True to rebuild."
             )
 
-        if force_download and self.local_data_dir.exists():
-            logger.info("force_download=True - removing %s", self.local_data_dir)
-            shutil.rmtree(self.local_data_dir)
+        if force and self.data_dir.exists():
+            logger.warning("force=True - removing %s", self.data_dir)
+            shutil.rmtree(self.data_dir)
+            self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.local_data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Todo add logger
-
-        # Run the download script.
-        # TODO: invoke builders.download.<dataset_id>.main(output_dir=self.local_data_dir)
-        if self.is_hf_dataset:
-            hf_transfer_download(
-                repo_id=self.url.split("https://huggingface.co/datasets/")[-1],
-                output_dir=self.local_data_dir,
-                revision=self.commit,  # todo change this
-                hf_token=cs.HF_TOKEN,
-            )
-        else:
-            raise NotImplementedError
+        build.run_builder(
+            main_fn,
+            output_dir=self.data_dir,
+            logs_dir=self.logs_dir,
+        )
 
         # Hash the dataset files
         utils.compute_and_write_files_hashes(
-            root_dir=self.local_data_dir,
-            output_dir=self.local_root_dir / 'hashes',
-            filename_pattern="*.json",
+            input_dir=self.data_dir,
+            output_dir=self.hashes_dir,
+            filename_patterns=['*' + f for f in self.file_formats],
         )
 
-        # Compute a single hash for the entire dataset directory (e.g., by hashing the concatenation of all file hashes)
+        # Single hash for the whole dataset (digest of the per-file hashes)
         dataset_hash = utils.compute_directory_hash(
-            root_dir=self.local_root_dir / 'hashes',
-            output_path=self.local_root_dir / f'hashes/{self.id}.hash',
+            input_dir=self.hashes_dir,
+            output_path=self.hashes_dir / f'{self.id}.hash',
         )
 
-        self.downloads.append({
-            'date': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-            'commit': getattr(self, 'commit', None),
-            # 'user': getpass.getuser(), # Todo implement this
-            'output_dir': str(self.local_data_dir),
+        self.build_history.append({
+            'datetime': datetime.now(timezone.utc).isoformat(timespec='seconds'),
             'hash': dataset_hash,
         })
 
-        # Write to yaml
         self.to_yaml()
 
 
-    def _is_already_downloaded(self) -> bool:
+
+
+    def _is_already_built(self) -> bool:
         """Return True if ``self`` already appears downloaded at the requested commit."""
-        if not self.downloads:
+        if not self.build_history:
             return False
-        if not self.local_data_dir.exists() or not any(self.local_data_dir.iterdir()):
+        if not self.data_dir.exists() or not any(self.data_dir.iterdir()):
             return False
         try:
-            return self.get_local_commit() == getattr(self, 'commit', None)
+            return self.get_local_commit() == self.version
         except (FileNotFoundError, NotImplementedError):
             return False
-
-
-dataset = Dataset.from_yaml(Path('/Users/sven/packages/apertus_data/catalogue/sven-nm___xet_test.yaml'))
-dataset.download()
