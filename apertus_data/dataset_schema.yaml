@@ -40,7 +40,11 @@ properties:
     pattern: "^(https?://[^?#%\\s&]+)?$"
     examples:
       - https://huggingface.co/datasets/LLM360/MegaMath
-      - null ]
+      - null
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: "https://huggingface.co/datasets/LLM360/MegaMath"
+    x-git-issue-required: false
 
 
   owner:
@@ -56,6 +60,10 @@ properties:
       - LLM360
       - zenodo
       - swiss-ai
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: "LLM360"
+    x-git-issue-required: true
 
   name:
     type: string
@@ -64,6 +72,10 @@ properties:
     examples:
       - MegaMath
       - FineWeb-Edu
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: "MegaMath"
+    x-git-issue-required: true
 
   # Todo: version and commit hash could be two different fields.
   version:
@@ -80,6 +92,10 @@ properties:
       - v1.01
       - version_2
       - null
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: "5bc987ce1580cd8afe385e003598aa8c29cd63cc"
+    x-git-issue-required: false
 
   # ==================== METADATA ====================
   tags:
@@ -121,6 +137,13 @@ properties:
         - truthfulness
     uniqueItems: true
     minItems: 1
+    # GitHub Issue Form hints
+    x-git-issue-type: textarea
+    x-git-issue-placeholder: |
+      pre-training
+      math
+      reasoning
+    x-git-issue-required: true
 
   modalities:
     type: array
@@ -133,6 +156,9 @@ properties:
         - image
     uniqueItems: true
     minItems: 1
+    # GitHub Issue Form hints
+    x-git-issue-type: checkboxes
+    x-git-issue-required: true
 
   languages:
     type: array
@@ -142,6 +168,13 @@ properties:
     items:
       type: string
     uniqueItems: true
+    # GitHub Issue Form hints
+    x-git-issue-type: textarea
+    x-git-issue-placeholder: |
+      en
+      fr
+      multilingual
+    x-git-issue-required: false
 
   # todo : this could be a drop-down with a free-text "other" option.
   licenses:
@@ -161,6 +194,11 @@ properties:
       - apache-2.0
       - cc0-1.0
       - gpl-3.0
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: "cc0-1.0"
+    x-git-issue-required: true
+
 
   formats:
     type: array
@@ -172,12 +210,21 @@ properties:
     minItems: 1
     uniqueItems: true
     examples: [ [ ".parquet" ], [ ".jsonl", ".parquet" ] ]
+    # GitHub Issue Form hints
+    x-git-issue-type: input
+    x-git-issue-placeholder: ".json"
+    x-git-issue-required: true
 
   notes:
     type: string
     nullable: true
     description: |
       Free-text notes or important remarks about the dataset.
+
+    # GitHub Issue Form hints
+    x-git-issue-type: textarea
+    x-git-issue-placeholder: "Any additional information, limitations, usage tips..."
+    x-git-issue-required: false
 
   # ==================== AUTOMATIC FIELDS ====================
   id:
