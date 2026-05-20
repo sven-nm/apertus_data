@@ -8,7 +8,7 @@ CATALOGUE_DIR: Path = PROJECT_ROOT / 'catalogue'
 BUILDERS_DIR: Path = PROJECT_ROOT / 'builders' # Todo change this
 DATA_DIR: Path = Path('/Users/sven/Desktop/data')  # Todo: ⚠️ change this
 
-SCHEMA_PATH = PROJECT_ROOT / 'apertus_data' / 'dataset_schema.yaml'
+SCHEMA_PATH = PROJECT_ROOT / 'apertus_data' / 'dataset_schema.yml'
 
 GITHUB_OWNER = 'sven-nm'  # Todo: ⚠️ change this
 GITHUB_REPO = 'apertus_data'  # Todo: ⚠️ change this

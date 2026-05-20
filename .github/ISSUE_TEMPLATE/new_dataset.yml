@@ -4,28 +4,19 @@ title: '[dataset]: <owner>/<name>'
 labels:
 - dataset
 body:
-- type: markdown
-  attributes:
-    value: |
-      Official YAML schema for dataset entries in the `apertus_data` catalogue.
-      All files must be stored as `apertus_data/catalogue/[dataset_id].yaml`.
-
-      **YAML Style Rules (mandatory)**:
-      - Use **2-space indentation** only, no tabs.
-      - Lists (`- item`) must be indented under their parent key.
-      - Strings containing special characters or starting with punctuation must be quoted.
 - type: input
   id: url
   attributes:
     label: url
     description: |
       Clean, canonical URL to the original dataset (without query parameters, fragments, or file paths).
+      Leave empty (on GitHub issue) or `null`  (in direct YAML editing) for internal/generated datasets with no public URL.
       Examples
       - ✅ https://huggingface.co/datasets/LLM360/MegaMath
       - ✅ https://zenodo.org/records/1234567
       - ❌ https://huggingface.co/datasets/LLM360/MegaMath?ref=main
       - ❌ https://huggingface.co/datasets/LLM360/MegaMath/blob/main/data.jsonl.
-      Use null for fully internal/generated datasets with no public source URL.
+      - ✅ `null`
     placeholder: https://huggingface.co/datasets/LLM360/MegaMath
 - type: input
   id: owner
@@ -33,9 +24,9 @@ body:
     label: owner
     description: |
       Owner or organization responsible for the dataset.
-      - Hugging Face / GitHub: username or organization (e.g. "LLM360")
-      - Other platforms: platform name (e.g. "zenodo")
-      - Internally generated: "swiss-ai"
+      - ➡️ Hugging Face / GitHub: username or organization (e.g. "LLM360")
+      - ➡️ Other platforms: platform name (e.g. "zenodo")
+      - ➡️ Internally generated: "swiss-ai"
     placeholder: LLM360
   validations:
     required: true
@@ -43,7 +34,7 @@ body:
   id: name
   attributes:
     label: name
-    description: Official or primary name of the dataset.
+    description: Official or primary name of the dataset (e.g. "MegaMath", "FineWeb-Edu").
     placeholder: MegaMath
   validations:
     required: true
@@ -53,9 +44,14 @@ body:
     label: version
     description: |
       Version identifier of the dataset.
-      - Version-controlled sources (HF, GitHub): commit hash
-      - Explicit releases: version string (replace spaces with underscores)
-      - Leave null if no meaningful version exists.
+      - ➡️ Version-controlled sources (HF, GitHub): full (40 hex) commit hash
+      - ➡️ Explicit releases: version string (replace spaces with underscores)
+      - ➡️ Leave empty (on GitHub issue) or `null` (in direct YAML editing) if no version exists.
+      Examples:
+      - ✅ 5bc987ce1580cd8afe385e003598aa8c29cd63cc
+      - ✅ v1.01
+      - ✅ version_2
+      - ✅ `null`
     placeholder: 5bc987ce1580cd8afe385e003598aa8c29cd63cc
 - type: textarea
   id: tags
@@ -96,9 +92,11 @@ body:
   attributes:
     label: licenses
     description: |
-      License(s) of the dataset. Must be written in lowercase only.
-      Use standard SPDX identifiers when possible.
-      Examples: "cc-by-nc 4.0", "mit", "apache-2.0", "cc0-1.0", "gpl-3.0"
+      License(s) of the dataset. Must be written in lowercase only. Use standard SPDX identifiers when possible.
+      Examples:
+      - ✅ "cc-by-nc 4.0"
+      - ❌ "CC-BY-NC 4.0"
+      - ✅ "mit", "apache-2.0"
     placeholder: cc0-1.0
   validations:
     required: true
@@ -108,6 +106,10 @@ body:
     label: formats
     description: |
       File formats present in the final dataset (include the leading dot).
+      Examples:
+      - ✅ ".jsonl", ".parquet"
+      - ✅ ".jsonl"
+      - ❌ "jsonl" (missing leading dot)
     placeholder: .json
   validations:
     required: true

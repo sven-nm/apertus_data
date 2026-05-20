@@ -1,6 +1,6 @@
 """Generate a GitHub Issue Form template from the dataset JSON Schema.
 
-The schema (``dataset_schema.yaml``) is the single source of truth. Properties
+The schema (``dataset_schema.yml``) is the single source of truth. Properties
 that carry ``x-git-issue-*`` extension keywords get rendered as form fields in
 ``.github/ISSUE_TEMPLATE/new_dataset.yml``. The schema's regular ``description``
 is reused as the field description; ``items.enum`` is reused as the option list
@@ -83,11 +83,6 @@ def build_issue_template(schema: dict[str, Any]) -> dict[str, Any]:
     properties = schema.get('properties', {})
 
     body: list[dict[str, Any]] = []
-    if 'description' in schema:
-        body.append({
-            'type': 'markdown',
-            'attributes': {'value': schema['description']},
-        })
 
     for prop_name, prop_schema in properties.items():
         field = _build_field(prop_name, prop_schema)
