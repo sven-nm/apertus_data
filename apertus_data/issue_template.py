@@ -95,8 +95,8 @@ def build_issue_template(schema: dict[str, Any]) -> dict[str, Any]:
             body.append(field)
 
     return {
-        'name': schema.get('title', 'New dataset'),
-        'description': 'Register a new dataset in the apertus_data catalogue.',
+        'name': '➕ New Dataset',
+        'description': 'Submit a new dataset to the Apertus catalogue',
         'title': '[dataset]: <owner>/<name>',
         'labels': ['dataset'],
         'body': body,

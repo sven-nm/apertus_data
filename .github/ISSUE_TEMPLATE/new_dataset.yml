@@ -1,0 +1,120 @@
+name: ➕ New Dataset
+description: Submit a new dataset to the Apertus catalogue
+title: '[dataset]: <owner>/<name>'
+labels:
+- dataset
+body:
+- type: markdown
+  attributes:
+    value: |
+      Official YAML schema for dataset entries in the `apertus_data` catalogue.
+      All files must be stored as `apertus_data/catalogue/[dataset_id].yaml`.
+
+      **YAML Style Rules (mandatory)**:
+      - Use **2-space indentation** only, no tabs.
+      - Lists (`- item`) must be indented under their parent key.
+      - Strings containing special characters or starting with punctuation must be quoted.
+- type: input
+  id: url
+  attributes:
+    label: url
+    description: |
+      Clean, canonical URL to the original dataset (without query parameters, fragments, or file paths).
+      Examples
+      - ✅ https://huggingface.co/datasets/LLM360/MegaMath
+      - ✅ https://zenodo.org/records/1234567
+      - ❌ https://huggingface.co/datasets/LLM360/MegaMath?ref=main
+      - ❌ https://huggingface.co/datasets/LLM360/MegaMath/blob/main/data.jsonl.
+      Use null for fully internal/generated datasets with no public source URL.
+    placeholder: https://huggingface.co/datasets/LLM360/MegaMath
+- type: input
+  id: owner
+  attributes:
+    label: owner
+    description: |
+      Owner or organization responsible for the dataset.
+      - Hugging Face / GitHub: username or organization (e.g. "LLM360")
+      - Other platforms: platform name (e.g. "zenodo")
+      - Internally generated: "swiss-ai"
+    placeholder: LLM360
+  validations:
+    required: true
+- type: input
+  id: name
+  attributes:
+    label: name
+    description: Official or primary name of the dataset.
+    placeholder: MegaMath
+  validations:
+    required: true
+- type: input
+  id: version
+  attributes:
+    label: version
+    description: |
+      Version identifier of the dataset.
+      - Version-controlled sources (HF, GitHub): commit hash
+      - Explicit releases: version string (replace spaces with underscores)
+      - Leave null if no meaningful version exists.
+    placeholder: 5bc987ce1580cd8afe385e003598aa8c29cd63cc
+- type: textarea
+  id: tags
+  attributes:
+    label: tags
+    description: |
+      Tags describing the dataset's purpose, domain, and intended ML use case.
+    placeholder: |
+      pre-training
+      math
+      reasoning
+  validations:
+    required: true
+- type: checkboxes
+  id: modalities
+  attributes:
+    label: modalities
+    description: Data modalities present in the dataset.
+    options:
+    - label: text
+    - label: audio
+    - label: image
+  validations:
+    required: true
+- type: textarea
+  id: languages
+  attributes:
+    label: languages
+    description: |
+      Languages present using ISO 639-1 codes.
+      Use "multilingual" or "european" when appropriate.
+    placeholder: |
+      en
+      fr
+      multilingual
+- type: input
+  id: licenses
+  attributes:
+    label: licenses
+    description: |
+      License(s) of the dataset. Must be written in lowercase only.
+      Use standard SPDX identifiers when possible.
+      Examples: "cc-by-nc 4.0", "mit", "apache-2.0", "cc0-1.0", "gpl-3.0"
+    placeholder: cc0-1.0
+  validations:
+    required: true
+- type: input
+  id: formats
+  attributes:
+    label: formats
+    description: |
+      File formats present in the final dataset (include the leading dot).
+    placeholder: .json
+  validations:
+    required: true
+- type: textarea
+  id: notes
+  attributes:
+    label: notes
+    description: |
+      Free-text notes or important remarks about the dataset.
+    placeholder: Any additional information, limitations, usage tips...

@@ -14,7 +14,6 @@ import requests
 from pathlib import Path
 from typing import Dict, List
 
-
 from apertus_data import constants as cs
 from apertus_data.utils import get_logger
 
@@ -109,33 +108,83 @@ def check_build_requirements(data: Dict) -> List[str]:
 
     Returns list of error messages (empty if all checks pass).
     """
+
     errors = []
-    req = data["build_requirements"]
+    builders_url = f'https://github.com/{cs.GITHUB_OWNER}/{cs.GITHUB_REPO}/blob/main/builders/'
+    build_requirements = data.get("build_requirements")
+
+    # ============================================================
+    #                   YAML FORMATTING CHECKS
+    # ============================================================
+
+    # Start by checking that build_requirements is present
+    if build_requirements is None:
+        return []  # No build_requirements ; can be the case of newly created datasets
+
+    # if build_requirements exist, we enforce the following:
+    for field in ["source_datasets_ids", "build_script_url", "build_script_commit"]:
+        if build_requirements.get(field) is None:
+            errors.append(f"ERROR: build_requirements must contain a '{field}' field.")
+
+    if errors:
+        return errors
+
+    # Check `source_datasets_ids` is a list[str]
+    try:
+        is_list = isinstance(build_requirements['source_datasets_ids'], list)
+        is_list_str = all(isinstance(id_, str) for id_ in build_requirements['source_datasets_ids'])
+        assert is_list and is_list_str, f"ERROR: `build_requirements['source_datasets_ids']` should be a list[str] of dataset IDs."
+
+    except AssertionError as e:
+        errors.append(str(e))
+
+    # Check `build_script_url` is a string and looks like a GitHub URL
+    try:
+        is_str = isinstance(build_requirements['build_script_url'], str)
+        is_github_url = build_requirements['build_script_url'].startswith(builders_url)
+        assert is_str and is_github_url, f"ERROR: `build_requirements['build_script_url']` should be a string and start with {builders_url}."
+    except AssertionError as e:
+        errors.append(str(e))
+
+    # Check `build_script_commit` is a string and looks like a commit hash
+    try:
+        is_str = isinstance(build_requirements['build_script_commit'], str)
+        is_commit = is_commit_hash(build_requirements['build_script_commit'])
+        assert is_str and is_commit, f"ERROR: `build_requirements['build_script_commit']` should be a string and a full 40-character commit hash."
+    except AssertionError as e:
+        errors.append(str(e))
+
+    if errors:
+        return errors
+
+    # ============================================================
+    #                   GITHUB CHECKS
+    # ============================================================
 
     # Source datasets must exist
-    for src_id in req["source_datasets_ids"]:
-        if src_id:
-            url = f"{cs.GITHUB_RAW_BASE}/main/apertus_data/catalogue/{src_id}.yaml"
-            try:
-                if requests.head(url, timeout=10).status_code != 200:
-                    errors.append(f"ERROR: Source dataset '{src_id}' not found on GitHub main branch. Please create an issue with the source datasets first.")
-            except:
-                errors.append(f"ERROR: Could not verify source dataset '{src_id}' on GitHub.")
+    for src_id in build_requirements["source_datasets_ids"]:
+        url = f"{cs.GITHUB_RAW_BASE}/main/catalogue/{src_id}.yaml"
+        try:
+            if requests.head(url, timeout=10).status_code != 200:
+                errors.append(
+                    f"ERROR: Source dataset '{src_id}' not found on GitHub main branch. Please create an issue with the source datasets first.")
+        except:
+            errors.append(f"ERROR: Could not verify source dataset '{src_id}' on GitHub.")
 
     # Build script must exist at the given commit
-    script_url = req.get("build_script_url")
-    commit = req.get("build_script_commit")
+    script_url = build_requirements.get("build_script_url")
+    commit = build_requirements.get("build_script_commit")
 
-    if script_url and commit:
-        try:
-            # Extract path after /blob/xxxx/
-            rel_path = script_url.split("/blob/")[-1].split("/", 1)[-1]
-            check_url = f"https://raw.githubusercontent.com/{cs.GITHUB_OWNER}/{cs.GITHUB_REPO}/{commit}/{rel_path}"
+    try:
+        # Extract path after /blob/xxxx/
+        rel_path = script_url.split(builders_url)[-1]
+        check_url = f"https://raw.githubusercontent.com/{cs.GITHUB_OWNER}/{cs.GITHUB_REPO}/{commit}/{rel_path}"
 
-            if requests.head(check_url, timeout=10).status_code != 200:
-                errors.append(f"ERROR: Build script not found at commit {commit[:7]} on GitHub. You must commit the dataset's build script to GitHub before proceeding.")
-        except:
-            errors.append("ERROR: Could not verify build script on GitHub.")
+        if requests.head(check_url, timeout=10).status_code != 200:
+            errors.append(
+                f"ERROR: Build script not found at commit {commit[:7]} on GitHub. You must commit the dataset's build script to GitHub before proceeding.")
+    except:
+        errors.append("ERROR: Could not verify build script on GitHub.")
 
     return errors
 
