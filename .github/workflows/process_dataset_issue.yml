@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   process:
-    if: contains(github.event.issue.labels.*.name, 'dataset')
+    if: startsWith(github.event.issue.title, '[dataset]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
