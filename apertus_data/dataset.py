@@ -36,6 +36,7 @@ class Dataset:
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> 'Dataset':
         """Load a Dataset from a catalogue YAML file."""
+        # todo should a YAML safe-check be performed here ?
         return cls(**yaml.safe_load(yaml_path.read_text(encoding='utf-8')))
 
     @classmethod
@@ -109,13 +110,14 @@ class Dataset:
             main_fn,
             output_dir=self.data_dir,
             logs_dir=self.logs_dir,
+            dataset=self,
         )
 
         # Hash the dataset files
         utils.compute_and_write_files_hashes(
             input_dir=self.data_dir,
             output_dir=self.hashes_dir,
-            filename_patterns=['*' + f for f in self.file_formats],
+            filename_patterns=['*' + f for f in self.formats],
         )
 
         # Single hash for the whole dataset (digest of the per-file hashes)

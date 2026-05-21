@@ -115,30 +115,32 @@ def compute_and_write_file_hash(
 
 
 def compute_and_write_files_hashes(
-    root_dir: Path,
+    input_dir: Path,
     output_dir: Path,
-    filename_pattern: str = "*",
+    filename_patterns: list[str] = ["*"],
     num_cpus: int = 1,
 ) -> None:
-    """Recursively compute Adler32 hash for every file under ``root_dir`` and write
-    each hash to ``output_dir``, mirroring the file's relative path under ``root_dir``.
+    """Recursively compute Adler32 hash for every file under ``input_dir`` and write
+    each hash to ``output_dir``, mirroring the file's relative path under ``input_dir``.
     """
     logger.info(
-        f"""⚙️ Computing hashes for files in {root_dir} with pattern {filename_pattern}, writing hash files to {output_dir}""")
+        f"""⚙️ Computing hashes for files in {input_dir} with patterns {filename_patterns}, writing hash files to {output_dir}""")
 
-    if not root_dir.is_dir():
-        raise FileNotFoundError(f"Error: {root_dir} is not a valid directory")
+    if not input_dir.is_dir():
+        raise FileNotFoundError(f"Error: {input_dir} is not a valid directory")
 
     # Get all files recursively
-    files = [f for f in root_dir.rglob(filename_pattern) if f.is_file()]
-    logger.info(f"⚙️ Found {len(files)} files in {root_dir}")
+    files= []
+    for pattern in filename_patterns:
+        files.extend([f for f in input_dir.rglob(pattern) if f.is_file()])
+    logger.info(f"⚙️ Found {len(files)} files in {input_dir}")
 
     # Pre-create destination subdirectories so workers don't need to mkdir
-    for parent in {(output_dir / f.relative_to(root_dir)).parent for f in files}:
+    for parent in {(output_dir / f.relative_to(input_dir)).parent for f in files}:
         parent.mkdir(parents=True, exist_ok=True)
 
     # Define output_path for each file
-    output_paths = [(output_dir / f.relative_to(root_dir).with_suffix('.hash')) for f in files]
+    output_paths = [(output_dir / f.relative_to(input_dir).with_suffix('.hash')) for f in files]
 
     # Set number of workers
     num_cpus = min(num_cpus, cpu_count())
@@ -161,7 +163,7 @@ def compute_and_write_files_hashes(
 
 
 def compute_directory_hash(
-    root_dir: Path,
+    input_dir: Path,
     output_path: Path,
     hash_function=zlib.adler32,
     filename_pattern: str = '*.hash'
@@ -172,15 +174,15 @@ def compute_directory_hash(
         This function sorts the hash files before computing the hash for maximum reproducibility.
 
     Args:
-        root_dir (Path): The root directory to compute the hash for.
+        input_dir (Path): The root directory to compute the hash for.
         output_path (Path): The file to write the computed hash to.
         hash_function (callable, optional): The hash function to use. Should take a binary string as input. Defaults to zlib.adler32.
         filename_pattern (str, optional): The pattern to match hash files. Defaults to '*.hash'.
     """
-    logger.info(f"⚙️ Computing directory hash for {root_dir} using files matching {filename_pattern}")
+    logger.info(f"⚙️ Computing directory hash for {input_dir} using files matching {filename_pattern}")
 
     # Get existing hashes
-    hashes = [f.read_text(encoding='utf-8').strip() for f in root_dir.rglob(filename_pattern)]
+    hashes = [f.read_text(encoding='utf-8').strip() for f in input_dir.rglob(filename_pattern)]
 
     # Sort the hashes
     hashes.sort()
@@ -189,7 +191,7 @@ def compute_directory_hash(
     combined_data = ''.join(hashes).encode('utf-8')
     hash_value = hash_function(combined_data)
     hash_value = f"{hash_value:08x}"
-    logger.info(f'✅ Computed directory hash for {root_dir}: {hash_value}')
+    logger.info(f'✅ Computed directory hash for {input_dir}: {hash_value}')
 
     # Write to output_path
     output_path.write_text(hash_value)

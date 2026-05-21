@@ -18,6 +18,7 @@ import importlib.util
 import inspect
 import subprocess
 import sys
+import re
 from pathlib import Path
 from typing import Callable
 
@@ -41,19 +42,20 @@ def validate_builder_signature(func: BuilderFn) -> None:
     signature = inspect.signature(func)
     params = list(signature.parameters.values())
 
-    if len(params) < 2 or params[0].name != 'output_dir' or params[1].name != 'logs_dir':
+    if len(params) < 3 or params[0].name != 'output_dir' or params[1].name != 'logs_dir' or params[2].name != 'dataset':
         raise TypeError(
             f"Builder {func.__qualname__!r} must start with positional parameters "
             f"(output_dir, logs_dir, ...); got {[p.name for p in params]!r}."
         )
 
-    for p in params[2:]:
-        if p.kind is not inspect.Parameter.KEYWORD_ONLY:
-            raise TypeError(
-                f"Builder {func.__qualname__!r}: parameter {p.name!r} after "
-                f"(output_dir, logs_dir) must be keyword-only "
-                f"(declare them after `*` in the signature)."
-            )
+    # Todo: see how we handle this
+    # for p in params[3:]:
+    #     if p.kind is not inspect.Parameter.KEYWORD_ONLY:
+    #         raise TypeError(
+    #             f"Builder {func.__qualname__!r}: parameter {p.name!r} after "
+    #             f"(output_dir, logs_dir) must be keyword-only "
+    #             f"(declare them after `*` in the signature)."
+    #         )
 
     if signature.return_annotation not in (None, type(None), inspect.Signature.empty):
         raise TypeError(
@@ -63,17 +65,45 @@ def validate_builder_signature(func: BuilderFn) -> None:
 
 
 def parse_build_script_url(url: str) -> str:
-    """Extract the repo-relative path from a ``build_script_url``.
-
-    Example::
-
-        >>> parse_build_script_url(
-        ...     'https://github.com/sven-nm/apertus_data/builders/foo.py'
-        ... )
-        'builders/foo.py'
     """
-    expected_prefix = f'https://github.com/{cs.GITHUB_OWNER}/{cs.GITHUB_REPO}/'
-    return url.split(expected_prefix)[-1]
+    Extract the repo-relative path from any GitHub URL.
+
+    Handles all these formats:
+        - https://github.com/sven-nm/apertus_data/builders/foo.py
+        - https://github.com/sven-nm/apertus_data/blob/main/builders/foo.py
+        - https://github.com/sven-nm/apertus_data/blob/75e48d.../builders/foo.py
+        - https://raw.githubusercontent.com/sven-nm/apertus_data/main/builders/foo.py
+    """
+    if not url or not isinstance(url, str):
+        raise ValueError("URL must be a non-empty string")
+
+    url = url.strip().rstrip('/')
+
+    # 1. raw.githubusercontent.com URLs
+    if "raw.githubusercontent.com" in url:
+        # raw.githubusercontent.com/OWNER/REPO/BRANCH/PATH...
+        match = re.search(r'raw\.githubusercontent\.com/[^/]+/[^/]+/[^/]+/(.+)', url)
+        if match:
+            return match.group(1)
+
+    # 2. github.com with /blob/ or /tree/
+    match = re.search(
+        r'github\.com/[^/]+/[^/]+/(?:blob|tree)/[^/]+/(.+)',
+        url
+    )
+    if match:
+        return match.group(1)
+
+    # 3. github.com without blob/tree (direct path)
+    match = re.search(
+        r'github\.com/[^/]+/[^/]+/(.+)',
+        url
+    )
+    if match:
+        return match.group(1)
+
+    # Fallback: if nothing matched, return the original (or raise)
+    raise ValueError(f"Could not parse GitHub URL: {url}")
 
 
 def verify_remote_script(url: str, commit: str, timeout: int = 10) -> None:
@@ -85,7 +115,7 @@ def verify_remote_script(url: str, commit: str, timeout: int = 10) -> None:
     response = requests.head(raw_url, timeout=timeout, allow_redirects=True)
     if response.status_code != 200:
         raise RuntimeError(
-            f"Build script not found on GitHub at commit {commit[:7]}: "
+            f"Build script not found on GitHub at commit {commit}: "
             f"HTTP {response.status_code} on {raw_url}."
         )
 
@@ -184,6 +214,7 @@ def run_builder(
     func: BuilderFn,
     output_dir: Path,
     logs_dir: Path,
+    dataset: 'Dataset',
     **kwargs,
 ) -> None:
     """Invoke a builder ``main`` callable under the runner's contract.
@@ -199,7 +230,7 @@ def run_builder(
 
     with log_to_file(logs_dir, name=name) as log_path:
         logger.info("▶️ Running builder %r → %s", name, output_dir)
-        func(output_dir=output_dir, logs_dir=logs_dir, **kwargs)
+        func(output_dir=output_dir, logs_dir=logs_dir, dataset=dataset, **kwargs)
         logger.info("◀️ Builder %r finished", name)
 
     if not any(output_dir.iterdir()):

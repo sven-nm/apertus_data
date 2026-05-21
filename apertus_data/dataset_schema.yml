@@ -247,7 +247,7 @@ properties:
       build_script_url:
         type: [ string, "null" ]
         description: URL to the processing script used. Null for raw datasets without a build script.
-        pattern: "^https://github.com/sven-nm/apertus_data/builders/"
+        pattern: "^https://github.com/sven-nm/apertus_data/blob/main/builders"
 
       build_script_commit:
         type: [ string, "null" ]
