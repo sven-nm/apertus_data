@@ -1,0 +1,12 @@
+url: https://huggingface.co/datasets/sven-nm/xet_test
+owner: sven-nm
+name: xet_test
+tags:
+  - pre-training
+modalities:
+  - text
+licenses:
+  - cc0-1.0
+formats:
+  - .json
+version: 5bc987ce1580cd8afe385e003598aa8c29cd63cc
