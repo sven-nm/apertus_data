@@ -1,0 +1,105 @@
+name: Process Dataset Issue
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  process:
+    if: contains(github.event.issue.labels.*.name, 'dataset')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet pyyaml jsonschema requests tqdm
+
+      - name: Save issue body to file
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: printf '%s' "$ISSUE_BODY" > /tmp/issue_body.md
+
+      - name: Parse & validate issue
+        id: process
+        continue-on-error: true
+        run: |
+          python -m apertus_data.yaml_processing \
+            --issue-body-file /tmp/issue_body.md \
+            --errors-file /tmp/errors.json
+
+      - name: Comment errors on issue
+        if: steps.process.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python <<'PY' > /tmp/comment.md
+          import json
+          from pathlib import Path
+          try:
+              errs = json.loads(Path("/tmp/errors.json").read_text())
+          except Exception:
+              errs = []
+          if not errs:
+              print("❌ Could not process this issue into a dataset YAML. "
+                    "No specific errors were captured — please check the workflow logs.")
+          else:
+              print("❌ Could not process this issue into a dataset YAML. "
+                    "Please edit the issue to address the following:")
+              print()
+              for e in errs:
+                  print(f"- {e}")
+          PY
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/comment.md
+          exit 1
+
+      - name: Create branch, commit, and open PR
+        if: steps.process.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          DATASET_ID: ${{ steps.process.outputs.dataset_id }}
+          YAML_RELPATH: ${{ steps.process.outputs.yaml_relpath }}
+        run: |
+          BRANCH="dataset-issue-${ISSUE_NUMBER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Always rebuild the branch from current main so re-runs on edited
+          # issues don't accumulate stale YAML files.
+          git checkout -B "$BRANCH" origin/main
+          git add "$YAML_RELPATH"
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit; nothing to do."
+            exit 0
+          fi
+
+          git commit -m "Add dataset ${DATASET_ID} (closes #${ISSUE_NUMBER})"
+          git push --force-with-lease origin "$BRANCH"
+
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "PR already open for ${BRANCH}; branch has been updated."
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "[dataset] ${DATASET_ID}" \
+              --body "Closes #${ISSUE_NUMBER}
+
+          Auto-generated from issue #${ISSUE_NUMBER} submitted by @${ISSUE_AUTHOR}."
+          fi
