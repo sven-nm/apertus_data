@@ -1,38 +1,43 @@
+from apertus_data import private
 from pathlib import Path
 from huggingface_hub import snapshot_download
 import os
 
-from apertus_data.utils import get_logger
+from apertus_data.utils import get_logger, log_to_file
 
 logger = get_logger(__name__)
 
-def hf_transfer_download(
-    repo_id: str,
-    output_dir: str | Path,
-    revision: str,
-    hf_token: str,
+
+def main(
+    output_dir: Path,
+    logs_dir: Path,
+    dataset: 'Dataset',
+    hf_token: str = private.HF_TOKEN,
     max_workers: int = 16
-) -> Path:
-    """Ultra-fast dataset download using hf_transfer (Rust backend)."""
-    # Enable hf_transfer (the fastest downloader)
+) -> None:
+    """Download the ``default_hf_download`` snapshot into ``output_dir``."""
+
     os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
-    output_dir = Path(output_dir) if output_dir else Path(repo_id.replace("/", "_"))
     output_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"🚀 Starting ultra-fast download of: {repo_id}")
-    logger.info(f"📁 Saving to: {output_dir}")
-    logger.info(f"⚡ hf_transfer enabled (Rust downloader)")
+    repo_id = f'{dataset.owner}/{dataset.name}'
 
-    local_dir = snapshot_download(repo_id=repo_id,
-                                  repo_type="dataset",
-                                  revision=revision,
-                                  local_dir=output_dir,
-                                  token=hf_token,
-                                  max_workers=max_workers,  # Adjust based on your connection
-                                  allow_patterns=["*"],  # Download everything
-                                  )
+    with log_to_file(logs_dir, name=__file__.name) as log_path:
+        logger.info(f"🚀 Starting ultra-fast download of: {repo_id}, version: {dataset.version[:8]}")
+        logger.info(f"📁 Saving to: {output_dir}")
+        logger.info(f"⚡ hf_transfer enabled (Rust downloader)")
 
-    logger.info(f"✅ Download completed successfully!")
-    logger.info(f"📦 Files saved in: {local_dir}")
-    return Path(local_dir)
+        snapshot_download(repo_id=repo_id,
+                          repo_type="dataset",
+                          revision=dataset.version,
+                          local_dir=output_dir,
+                          token=hf_token,
+                          max_workers=max_workers,  # Adjust based on your connection
+                          allow_patterns=["*"],  # Download everything
+                          )
+
+        logger.info(f"✅ Download completed successfully!")
+        logger.info(f"📂 Files saved in: {output_dir}")
+        logger.info(f'📃 Log saved in: {log_path}')

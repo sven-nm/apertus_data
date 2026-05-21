@@ -1,12 +1,13 @@
 import logging
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Iterator
 import csv
 import yaml
 import zlib
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # ========================= LOGGING ============================
@@ -27,6 +28,22 @@ def get_logger(name: str):
 
     """
     return logging.getLogger(name)
+
+@contextmanager
+def log_to_file(logs_dir: Path, name: str) -> Iterator[Path]:
+    """Attach a timestamped FileHandler to ``ROOT_LOGGER`` for the context's lifetime."""
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    log_path = logs_dir / f'{name}_{timestamp}.log'
+
+    handler = logging.FileHandler(log_path, encoding='utf-8')
+    handler.setFormatter(ROOT_FORMATTER)
+    ROOT_LOGGER.addHandler(handler)
+    try:
+        yield log_path
+    finally:
+        ROOT_LOGGER.removeHandler(handler)
+        handler.close()
 #================================================================
 
 
@@ -335,11 +352,4 @@ def tsv_to_yaml_files(tsv_path: str | Path, output_dir: str | Path) -> None:
             print(f"✅ Created: {yaml_path.name}")
 
     print(f"\n Finished! YAML files written to: {output_dir}")
-
-
-# sanity_check_tokenized_dataset("/capstor/store/cscs/swissai/infra01/datasets_tokenized/finepdfs-edu-multilingual-preprocessed/Apertus-70B-2509/")
-#
-# # print_files_by_date("/capstor/store/cscs/swissai/infra01/datasets/swiss-ai/finepdfs-edu-multilingual-preprocessed_new/logs/slurm_logs", "2026-05-02")
-# print_files_by_date("/users/snajemmeyer/Megatron-LM/logs/slurm/tokenization-Apertus-70B-2509-finepdfs-edu-multilingual-preprocessed", "2026-05-02")
-#
 
