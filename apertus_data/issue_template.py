@@ -92,7 +92,7 @@ def build_issue_template(schema: dict[str, Any]) -> dict[str, Any]:
     return {
         'name': '➕ New Dataset',
         'description': 'Submit a new dataset to the Apertus catalogue',
-        'title': '[dataset]: <owner>/<name>',
+        'title': "[dataset]: write your dataset's name",
         'labels': ['dataset'],
         'body': body,
     }
