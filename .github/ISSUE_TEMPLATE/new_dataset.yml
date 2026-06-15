@@ -1,4 +1,4 @@
-name: ➕ New dataset
+name: ➕ New Dataset
 description: Submit a new dataset to the Apertus catalogue
 title: '[dataset]: <owner>/<name>'
 labels:
@@ -47,6 +47,8 @@ body:
       - ➡️ Version-controlled sources (HF, GitHub): full (40 hex) commit hash
       - ➡️ Explicit releases: version string (replace spaces with underscores)
       - ➡️ Leave empty (on GitHub issue) or `null` (in direct YAML editing) if no version exists.
+
+
       Examples:
       - ✅ 5bc987ce1580cd8afe385e003598aa8c29cd63cc
       - ✅ v1.01

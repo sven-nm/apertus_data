@@ -9,7 +9,7 @@ description: |
   - Lists (`- item`) must be indented under their parent key.
   - Strings containing special characters or starting with punctuation must be quoted.
 
-  `x-properties` are used to provide hints for the GitHub issue form and are ignored in direct YAML editing.
+  `x-`-preceeded properties are used to provide hints for the GitHub issue form and are ignored in direct YAML editing.
 type: object
 additionalProperties: false
 
