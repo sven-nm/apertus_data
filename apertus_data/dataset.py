@@ -5,7 +5,9 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
 import yaml
+from jsonschema import ValidationError, validate
 
 from apertus_data import build
 from apertus_data import constants as cs
@@ -35,9 +37,39 @@ class Dataset:
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> 'Dataset':
-        """Load a Dataset from a catalogue YAML file."""
-        # todo should a YAML safe-check be performed here ?
-        return cls(**yaml.safe_load(yaml_path.read_text(encoding='utf-8')))
+        """Load a Dataset from a catalogue YAML file.
+
+        Performs two safety checks before creating the object:
+        1. Asserts the local YAML matches the upstream (GitHub) version.
+        2. Validates the YAML against the dataset schema.
+        """
+        local_data = yaml.safe_load(yaml_path.read_text(encoding='utf-8'))
+
+        dataset_id = local_data.get('id')
+        if not dataset_id:
+            raise ValueError(f"YAML at {yaml_path} is missing the required 'id' field.")
+
+        upstream_url = f"{cs.GITHUB_RAW_BASE}/main/catalogue/{dataset_id}.yaml"
+        try:
+            response = requests.get(upstream_url, timeout=10)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(
+                f"Failed to fetch upstream YAML from {upstream_url}: {e}")
+
+        upstream_data = yaml.safe_load(response.text)
+        if local_data != upstream_data:
+            raise ValueError(
+                f"Local YAML at {yaml_path} diverges from upstream {upstream_url}.")
+
+        schema = yaml.safe_load(cs.SCHEMA_PATH.read_text(encoding='utf-8'))
+        try:
+            validate(instance=local_data, schema=schema)
+        except ValidationError as e:
+            raise ValueError(
+                f"Schema validation failed for {yaml_path}: {e.message} (at {list(e.path)})")
+
+        return cls(**local_data)
 
     @classmethod
     def from_id(cls, id_: str) -> 'Dataset':
@@ -46,6 +78,7 @@ class Dataset:
 
     def to_yaml(self) -> None:
         """Write the dataset to a catalogue YAML file."""
+        # Todo 👀: should this include the a YAML validation
         yaml_dict = {k: getattr(self, k) if not isinstance(getattr(self, k), Path) else str(getattr(self, k))
                      for k in cs.YAML_KEYS if hasattr(self, k)}
 
