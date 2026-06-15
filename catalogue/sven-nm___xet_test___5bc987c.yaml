@@ -18,6 +18,6 @@ hashes_dir: /Users/sven/Desktop/data/sven-nm___xet_test___5bc987c/hashes
 build_requirements:
   source_datasets_ids: [ ]
   build_script_url: https://github.com/sven-nm/apertus_data/blob/main/builders/default_hf_download.py
-  build_script_commit: 15f5b3b16f2707a059fe8cf686116ebe01c07a70
+  build_script_commit: a7ba9e22ba94c57253b70f9e53ba18e9abb08d14
 build_history: [ ]
 usage_history: [ ]
