@@ -24,7 +24,7 @@ def main(
 
     repo_id = f'{dataset.owner}/{dataset.name}'
 
-    with log_to_file(logs_dir, name=__file__) as log_path:
+    with log_to_file(logs_dir, name=__file__.name) as log_path:
         logger.info(f"🚀 Starting ultra-fast download of: {repo_id}, version: {dataset.version[:8]}")
         logger.info(f"📁 Saving to: {output_dir}")
         logger.info(f"⚡ hf_transfer enabled (Rust downloader)")

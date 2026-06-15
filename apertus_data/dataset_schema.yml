@@ -225,6 +225,30 @@ properties:
       Do not edit manually.
     minLength: 1
 
+  root_dir:
+    type: string
+    description: |
+      Path to the root directory of the dataset on disk.
+    minLength: 1
+
+  data_dir:
+    type: string
+    description: |
+      Path to the root directory of the dataset on disk.
+    minLength: 1
+
+  logs_dir:
+    type: string
+    description: |
+      Path to the root directory of the dataset on disk.
+    minLength: 1
+
+  hashes_dir:
+    type: string
+    description: |
+      Path to the root directory of the dataset on disk.
+    minLength: 1
+
   # ==================== BUILD INFORMATION ====================
   build_requirements:
     type: object
