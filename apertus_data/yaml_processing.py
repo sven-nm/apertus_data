@@ -52,7 +52,7 @@ def generate_id(owner: str, name: str, version: str | None) -> str:
     else:
         version_part = "0000000"
 
-    return f"{owner}___{name}___{version_part}"
+    return f"{name}___{version_part}"
 
 
 # ====================== ISSUE-FORM PARSING ======================

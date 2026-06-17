@@ -19,6 +19,7 @@ import inspect
 import subprocess
 import sys
 import re
+import tempfile
 from pathlib import Path
 from typing import Callable
 
@@ -127,19 +128,19 @@ def _git(*args: str) -> subprocess.CompletedProcess:
         capture_output=True, text=True, check=False,
     )
 
-
 def verify_local_script_at_commit(url: str, commit: str) -> Path:
-    """Ensure the local copy of the script is at the recorded commit.
+    """Ensure the returned script matches the recorded commit.
 
     Strategy:
     - Derive the local path from the URL.
-    - Resolve the file's most recent commit. If it matches ``commit``, return.
+    - Resolve the file's most recent commit. If it matches ``commit``, return
+      the local path as-is.
     - Otherwise look ``commit`` up in the file's history; if absent, raise.
-    - If present, ``git checkout <commit> -- <path>`` to update the working
-      tree to exactly that revision, then return the path.
+    - If present, read the file content at that commit via ``git show`` and
+      write it to a temp file, leaving the working tree and index untouched.
 
     Returns:
-        Path to the (now commit-aligned) local script file.
+        Path to the commit-aligned script (local file or a temp copy).
     """
     relative_path = parse_build_script_url(url)
     local_path = cs.PROJECT_ROOT / relative_path
@@ -172,13 +173,17 @@ def verify_local_script_at_commit(url: str, commit: str) -> Path:
             f"History tip: {current[:7] or '<none>'}."
         )
 
-    logger.info("⏪ Checking out %s @ %s", relative_path, commit[:7])
-    checkout = _git('checkout', commit, '--', relative_path)
-    if checkout.returncode != 0:
+    logger.info("📖 Reading %s @ %s via git show", relative_path, commit[:7])
+    result = _git('show', f'{commit}:{relative_path}')
+    if result.returncode != 0:
         raise RuntimeError(
-            f"git checkout {commit[:7]} -- {relative_path} failed: {checkout.stderr.strip()}"
+            f"git show {commit[:7]}:{relative_path} failed: {result.stderr.strip()}"
         )
-    return local_path
+
+    tmp_path = Path(tempfile.mkdtemp()) / local_path.name
+    tmp_path.write_text(result.stdout)
+    logger.info("✅ Script written to temp file %s", tmp_path)
+    return tmp_path
 
 
 def load_main(script_path: Path) -> BuilderFn:

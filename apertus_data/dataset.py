@@ -119,6 +119,13 @@ class Dataset:
             force: If True, wipe ``self.data_dir`` and re-run even when the
                 dataset already appears built at the requested commit.
         """
+        source_id = getattr(self, 'source_dataset', None)
+        if source_id:
+            source = Dataset.from_id(source_id)
+            if not source._is_already_built():
+                logger.info("Building source dataset %r before %r", source_id, self.id)
+                source.build(force=False)
+
         req = getattr(self, 'build_requirements', None) or {}
         url, commit = req.get('build_script_url'), req.get('build_script_commit')
         if not url or not commit:
