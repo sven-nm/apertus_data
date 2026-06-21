@@ -174,37 +174,41 @@ properties:
     type: array
     description: |
       License(s) of the dataset. Must be written in lowercase only. Use standard SPDX identifiers when possible.
-      Examples: 
-      - ✅ "cc-by-nc 4.0"
-      - ❌ "CC-BY-NC 4.0"
-      - ✅ "mit", "apache-2.0"
+      One per line, no quotes.
+      Examples:
+      - ✅ cc-by-nc 4.0
+      - ❌ CC-BY-NC 4.0
     items:
       type: string
       pattern: "^[a-z0-9. -]+$"
     minItems: 1
     uniqueItems: true
     # GitHub Issue Form hints
-    x-git-issue-type: input
-    x-git-issue-placeholder: "cc0-1.0"
+    x-git-issue-type: textarea
+    x-git-issue-placeholder: |
+      mit
+      apache-2.0
     x-git-issue-required: true
 
 
   formats:
     type: array
     description: |
-      File formats present in the final dataset (include the leading dot).
+      File formats present in the final dataset (include the leading dot). One format per line, no quotes.
       Examples:
-      - ✅ ".jsonl", ".parquet"
-      - ✅ ".jsonl"
-      - ❌ "jsonl" (missing leading dot)
+      - ✅ .jsonl
+      - ✅ .parquet
+      - ❌ jsonl (missing leading dot)
     items:
       type: string
       pattern: "^\\.[a-z0-9]+$"
     minItems: 1
     uniqueItems: true
     # GitHub Issue Form hints
-    x-git-issue-type: input
-    x-git-issue-placeholder: ".json"
+    x-git-issue-type: textarea
+    x-git-issue-placeholder: |
+      .jsonl
+      .parquet
     x-git-issue-required: true
 
   notes:

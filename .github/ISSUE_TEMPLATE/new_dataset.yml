@@ -89,30 +89,34 @@ body:
       en
       fr
       multilingual
-- type: input
+- type: textarea
   id: licenses
   attributes:
     label: licenses
     description: |
       License(s) of the dataset. Must be written in lowercase only. Use standard SPDX identifiers when possible.
+      One per line, no quotes.
       Examples:
-      - ✅ "cc-by-nc 4.0"
-      - ❌ "CC-BY-NC 4.0"
-      - ✅ "mit", "apache-2.0"
-    placeholder: cc0-1.0
+      - ✅ cc-by-nc 4.0
+      - ❌ CC-BY-NC 4.0
+    placeholder: |
+      mit
+      apache-2.0
   validations:
     required: true
-- type: input
+- type: textarea
   id: formats
   attributes:
     label: formats
     description: |
-      File formats present in the final dataset (include the leading dot).
+      File formats present in the final dataset (include the leading dot). One format per line, no quotes.
       Examples:
-      - ✅ ".jsonl", ".parquet"
-      - ✅ ".jsonl"
-      - ❌ "jsonl" (missing leading dot)
-    placeholder: .json
+      - ✅ .jsonl
+      - ✅ .parquet
+      - ❌ jsonl (missing leading dot)
+    placeholder: |
+      .jsonl
+      .parquet
   validations:
     required: true
 - type: textarea
