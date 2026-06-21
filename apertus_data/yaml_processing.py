@@ -45,14 +45,15 @@ def clean_version(version: str | None) -> str | None:
     return cleaned
 
 
-def generate_id(owner: str, name: str, version: str | None) -> str:
-    """Generate deterministic dataset ID in the format ``owner___name___version``."""
-    if version:
-        version_part = version[:7] if is_commit_hash(version) else version
+# Todo adapt this for processed datasets
+def generate_id(data: dict) -> str:
+    """Generate deterministic dataset ID in the format ``name___version``."""
+    if data['version']:
+        version_part = data['version'][:7] if is_commit_hash(data['version']) else data['version']
     else:
         version_part = "0000000"
 
-    return f"{name}___{version_part}"
+    return f"{data['name']}___{version_part}"
 
 
 # ====================== ISSUE-FORM PARSING ======================
@@ -135,16 +136,6 @@ def parse_issue_body(body: str) -> dict[str, Any]:
             data[field_name] = _coerce_array(raw, prop.get("x-git-issue-type", "textarea"))
         else:
             data[field_name] = raw
-
-    # Automatic fields with sensible empty defaults; users can flesh these
-    # out in a follow-up PR.
-    data.setdefault("build_requirements", {
-        "source_datasets_ids": [],
-        "build_script_url": None,
-        "build_script_commit": None,
-    })
-    data.setdefault("build_history", [])
-    data.setdefault("usage_history", [])
 
     return data
 
@@ -287,11 +278,22 @@ def enrich_and_validate(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]
     """
     # manual enrichment
     data["version"] = clean_version(data.get("version"))
-    data["id"] = generate_id(data["owner"], data["name"], data["version"])
-    data['root_dir'] = str(cs.DATA_DIR / data['id'])
+    data["id"] = generate_id(data)
+    data['root_dir'] = cs.DATA_DIR / data['id']
     data['data_dir'] = str(data['root_dir'] / "data")
     data['logs_dir'] = str(data['root_dir'] / "logs")
     data['hashes_dir'] = str(data['root_dir'] / "hashes")
+    data['root_dir'] = str(data['root_dir'])
+
+
+    # out in a follow-up PR.
+    data.setdefault("build_requirements", {
+        "source_datasets_ids": [],
+        "build_script_url": None,
+        "build_script_commit": None,
+    })
+    data.setdefault("build_history", [])
+    data.setdefault("usage_history", [])
 
     warnings = check_url_rules(data)
     errors: list[str] = []
@@ -376,12 +378,7 @@ def main(argv: list[str] | None = None) -> None:
         _emit_github_output(success="false", dataset_id=data.get("id", ""))
         sys.exit(1)
 
-    # Determine output path. For --yaml-path we rewrite in place; for issue
-    # bodies we land in the catalogue under the generated ID.
-    if args.yaml_path:
-        output_path = args.yaml_path
-    else:
-        output_path = args.output_dir / f"{data['id']}.yaml"
+    output_path = args.output_dir / f"{data['id']}.yaml"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(_dump_yaml(data), encoding="utf-8")

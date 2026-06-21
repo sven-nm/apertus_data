@@ -19,6 +19,7 @@ ROOT_LOGGER = logging.getLogger()
 ROOT_LOGGER.setLevel(logging.INFO)
 ROOT_LOGGER.addHandler(ROOT_STREAM_HANDLER)
 
+
 def get_logger(name: str):
     """Custom logging wraper, called each time a logger is declared in the package.
 
@@ -28,6 +29,7 @@ def get_logger(name: str):
 
     """
     return logging.getLogger(name)
+
 
 @contextmanager
 def log_to_file(logs_dir: Path, name: str) -> Iterator[Path]:
@@ -44,13 +46,15 @@ def log_to_file(logs_dir: Path, name: str) -> Iterator[Path]:
     finally:
         ROOT_LOGGER.removeHandler(handler)
         handler.close()
+
+
 #================================================================
 
 
 logger = get_logger(__name__)
 
 
-def safe_move_directory(source: str, dest: str, exclude_suffix: str = '.hash'):
+def safe_move_directory(source: str, dest: str, exclude_suffix: str | None = '.hash', create_symlink: bool = False):
     """This function uses ``mv`` to move a directory from source to destination, skipping files that already exist in the destination."""
 
     src_dir = Path(source).resolve()
@@ -62,8 +66,12 @@ def safe_move_directory(source: str, dest: str, exclude_suffix: str = '.hash'):
     dst_dir.mkdir(parents=True, exist_ok=True)
 
     # Get all files recursively
-    files = sorted([f for f in src_dir.rglob('*')
-                    if not f.name.endswith(exclude_suffix)])
+    if exclude_suffix is None:
+        files = sorted(list(src_dir.rglob('*')))
+
+    else:
+        files = sorted([f for f in src_dir.rglob('*')
+                        if not f.name.endswith(exclude_suffix)])
 
     print(f"Moving {len(files)} files from {src_dir} to {dst_dir}")
 
@@ -87,6 +95,9 @@ def safe_move_directory(source: str, dest: str, exclude_suffix: str = '.hash'):
             src_file.rename(dst_file)  # atomic move on same filesystem
         except Exception as e:
             print(f"Failed to move {src_file}: {e}")
+
+    if create_symlink:
+        src_dir.symlink_to(dst_dir, target_is_directory=True)
 
     print("Move completed successfully!")
 
@@ -130,7 +141,7 @@ def compute_and_write_files_hashes(
         raise FileNotFoundError(f"Error: {input_dir} is not a valid directory")
 
     # Get all files recursively
-    files= []
+    files = []
     for pattern in filename_patterns:
         files.extend([f for f in input_dir.rglob(pattern) if f.is_file()])
     logger.info(f"⚙️ Found {len(files)} files in {input_dir}")
@@ -354,4 +365,3 @@ def tsv_to_yaml_files(tsv_path: str | Path, output_dir: str | Path) -> None:
             print(f"✅ Created: {yaml_path.name}")
 
     print(f"\n Finished! YAML files written to: {output_dir}")
-
