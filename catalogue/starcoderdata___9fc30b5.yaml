@@ -23,7 +23,7 @@ logs_dir: /Users/sven/Desktop/datasets_raw/starcoderdata___9fc30b5/logs
 hashes_dir: /Users/sven/Desktop/datasets_raw/starcoderdata___9fc30b5/hashes
 build_requirements:
   source_datasets_ids: []
-  build_script_url: null
-  build_script_commit: null
+  build_script_url: https://github.com/sven-nm/apertus_data/blob/main/builders/default_hf_download.py
+  build_script_commit: a7ba9e22ba94c57253b70f9e53ba18e9abb08d14
 build_history: []
 usage_history: []
