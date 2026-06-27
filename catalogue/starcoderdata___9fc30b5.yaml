@@ -1,0 +1,29 @@
+url: https://huggingface.co/datasets/bigcode/starcoderdata
+owner: bigcode
+name: starcoderdata
+version: 9fc30b578cedaec69e47302df72cf00feed7c8c4
+tags:
+- pre-training
+- code
+modalities:
+- text
+languages:
+- en
+- code
+licenses:
+- other
+formats:
+- .parquet
+type: raw
+notes: Potentially unclear license
+id: starcoderdata___9fc30b5
+root_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5
+data_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/data
+logs_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/logs
+hashes_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/hashes
+build_requirements:
+  source_datasets_ids: []
+  build_script_url: null
+  build_script_commit: null
+build_history: []
+usage_history: []
