@@ -17,10 +17,10 @@ formats:
 type: raw
 notes: Potentially unclear license
 id: starcoderdata___9fc30b5
-root_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5
-data_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/data
-logs_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/logs
-hashes_dir: /Users/sven/Desktop/data/starcoderdata___9fc30b5/hashes
+root_dir: /Users/sven/Desktop/dataset_raw/starcoderdata___9fc30b5
+data_dir: /Users/sven/Desktop/dataset_raw/starcoderdata___9fc30b5/data
+logs_dir: /Users/sven/Desktop/dataset_raw/starcoderdata___9fc30b5/logs
+hashes_dir: /Users/sven/Desktop/dataset_raw/starcoderdata___9fc30b5/hashes
 build_requirements:
   source_datasets_ids: []
   build_script_url: null

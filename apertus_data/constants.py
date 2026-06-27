@@ -6,7 +6,7 @@ import yaml
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 CATALOGUE_DIR: Path = PROJECT_ROOT / 'catalogue'
 BUILDERS_DIR: Path = PROJECT_ROOT / 'builders' # Todo change this
-DATA_DIR: Path = Path('/Users/sven/Desktop/data')  # Todo: ⚠️ change this
+DATA_DIR: Path = Path('/Users/sven/Desktop/')  # Todo: ⚠️ change this
 
 SCHEMA_PATH = PROJECT_ROOT / 'apertus_data' / 'dataset_schema.yml'
 

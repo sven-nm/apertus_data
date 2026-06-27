@@ -279,7 +279,7 @@ def enrich_and_validate(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]
     # manual enrichment
     data["version"] = clean_version(data.get("version"))
     data["id"] = generate_id(data)
-    data['root_dir'] = cs.DATA_DIR / data['id']
+    data['root_dir'] = cs.DATA_DIR / f'datasets_{data["type"]}' / data['id']
     data['data_dir'] = str(data['root_dir'] / "data")
     data['logs_dir'] = str(data['root_dir'] / "logs")
     data['hashes_dir'] = str(data['root_dir'] / "hashes")
