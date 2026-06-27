@@ -211,6 +211,21 @@ properties:
       .parquet
     x-git-issue-required: true
 
+  type:
+    type: string
+    description: "Whether the dataset is raw (i.e. directly taken from HuggingFace or any other source), processed (by us), or tokenized."
+    enum:
+      - raw
+      - processed
+      - tokenized
+    # GitHub Issue Form hints
+    x-git-issue-type: dropdown
+    x-git-issue-options:
+      - raw
+      - processed
+      - tokenized
+    x-git-issue-required: false
+
   notes:
     type: [ string, "null" ]
     description: |

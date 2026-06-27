@@ -119,6 +119,16 @@ body:
       .parquet
   validations:
     required: true
+- type: dropdown
+  id: type
+  attributes:
+    label: type
+    description: Whether the dataset is raw (i.e. directly taken from HuggingFace or any other source), processed (by us),
+      or tokenized.
+    options:
+    - raw
+    - processed
+    - tokenized
 - type: textarea
   id: notes
   attributes:

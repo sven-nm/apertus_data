@@ -7,8 +7,9 @@ is reused as the field description; ``items.enum`` is reused as the option list
 for ``checkboxes`` fields.
 
 Extension keywords consumed:
-- ``x-git-issue-type``: ``input`` | ``textarea`` | ``checkboxes`` (required to emit).
-- ``x-git-issue-placeholder``: placeholder text (ignored for ``checkboxes``).
+- ``x-git-issue-type``: ``input`` | ``textarea`` | ``checkboxes`` | ``dropdown`` (required to emit).
+- ``x-git-issue-placeholder``: placeholder text (ignored for ``checkboxes`` and ``dropdown``).
+- ``x-git-issue-options``: list of strings for ``dropdown`` fields.
 - ``x-git-issue-required``: bool; when true, ``validations.required: true``.
 
 Run as ``python -m apertus_data.issue_template`` to regenerate the template.
@@ -26,6 +27,7 @@ logger = get_logger(__name__)
 
 ISSUE_TYPE_KEY = 'x-git-issue-type'
 PLACEHOLDER_KEY = 'x-git-issue-placeholder'
+OPTIONS_KEY = 'x-git-issue-options'
 REQUIRED_KEY = 'x-git-issue-required'
 ALLOWED_TYPES = {'input', 'textarea', 'checkboxes', 'dropdown'}
 
@@ -65,6 +67,13 @@ def _build_field(prop_name: str, prop_schema: dict[str, Any]) -> dict[str, Any] 
 
     if issue_type == 'checkboxes':
         attributes['options'] = _checkbox_options(prop_schema)
+    elif issue_type == 'dropdown':
+        options = prop_schema.get(OPTIONS_KEY)
+        if not options:
+            raise ValueError(
+                f"Property {prop_name!r}: x-git-issue-type=dropdown requires {OPTIONS_KEY!r}."
+            )
+        attributes['options'] = list(options)
     elif PLACEHOLDER_KEY in prop_schema:
         attributes['placeholder'] = prop_schema[PLACEHOLDER_KEY]
 
