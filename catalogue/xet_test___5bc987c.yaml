@@ -1,0 +1,27 @@
+url: https://huggingface.co/datasets/sven-nm/xet_test
+owner: sven-nm
+name: xet_test
+version: 5bc987ce1580cd8afe385e003598aa8c29cd63cc
+tags:
+- pre-training
+modalities:
+- text
+languages:
+- en
+licenses:
+- cc0-1.0
+formats:
+- .json
+type: raw
+notes: Test dataset used for development purposes in `apertus_data`.
+id: xet_test___5bc987c
+root_dir: /Users/sven/Desktop/datasets_raw/xet_test___5bc987c
+data_dir: /Users/sven/Desktop/datasets_raw/xet_test___5bc987c/data
+logs_dir: /Users/sven/Desktop/datasets_raw/xet_test___5bc987c/logs
+hashes_dir: /Users/sven/Desktop/datasets_raw/xet_test___5bc987c/hashes
+build_requirements:
+  source_datasets_ids: []
+  build_script_url: null
+  build_script_commit: null
+build_history: []
+usage_history: []
