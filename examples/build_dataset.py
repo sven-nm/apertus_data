@@ -2,6 +2,6 @@
 from apertus_data.dataset import Dataset
 from pathlib import Path
 
-dataset = Dataset.from_id('sven-nm___xet_test___5bc987c')
+dataset = Dataset.from_id('starcoderdata___9fc30b5')
 
-dataset.build(force=True,)
+dataset.build(force=False)

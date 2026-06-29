@@ -305,15 +305,15 @@ properties:
       additionalProperties: false
       required:
         - datetime
-        - username
+        - hash
       properties:
         datetime:
           type: string
           description: Date and time when this build was created (e.g. "2026-05-12T14:30:00Z").
           format: date-time
-        username:
+        hash:
           type: string
-          description: GitHub username of the person who triggered the build.
+          description: Global hash of the dataset at this point in time.
 
   # ==================== USAGE TRACKING ====================
   usage_history:
@@ -325,14 +325,11 @@ properties:
       required:
         - name
         - date
-        - username
       properties:
         name:
           type: string
           description: Identifier for this usage (e.g. "v1_pretraining", "experiment_foo").
         date:
           type: string
+          description: Date and time of the usage (e.g. "2026-05-12T14:30:00Z").
           format: date-time
-        username:
-          type: string
-          description: GitHub username of the person who used the dataset.

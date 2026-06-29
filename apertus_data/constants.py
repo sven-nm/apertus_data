@@ -13,6 +13,7 @@ SCHEMA_PATH = PROJECT_ROOT / 'apertus_data' / 'dataset_schema.yml'
 GITHUB_OWNER = 'sven-nm'  # Todo: ⚠️ change this
 GITHUB_REPO = 'apertus_data'  # Todo: ⚠️ change this
 GITHUB_RAW_BASE = f'https://raw.githubusercontent.com/{GITHUB_OWNER}/{GITHUB_REPO}'
+GITHUB_API_BASE = f'https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}'
 
 YAML_KEYS = yaml.safe_load(SCHEMA_PATH.read_text(encoding='utf-8'))['properties'].keys()
 

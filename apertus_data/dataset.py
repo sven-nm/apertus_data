@@ -5,6 +5,8 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+import os
+
 import requests
 import yaml
 from jsonschema import ValidationError, validate
@@ -49,9 +51,12 @@ class Dataset:
         if not dataset_id:
             raise ValueError(f"YAML at {yaml_path} is missing the required 'id' field.")
 
-        upstream_url = f"{cs.GITHUB_RAW_BASE}/main/catalogue/{dataset_id}.yaml"
+        upstream_url = f"{cs.GITHUB_API_BASE}/contents/catalogue/{dataset_id}.yaml"
+        headers = {"Accept": "application/vnd.github.raw+json"}
+        if token := os.getenv("GITHUB_TOKEN"):
+            headers["Authorization"] = f"Bearer {token}"
         try:
-            response = requests.get(upstream_url, timeout=10)
+            response = requests.get(upstream_url, headers=headers, timeout=10)
             response.raise_for_status()
         except requests.RequestException as e:
             raise RuntimeError(
