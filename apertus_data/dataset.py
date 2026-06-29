@@ -2,6 +2,7 @@
 
 #%%
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -177,6 +178,24 @@ class Dataset:
         })
 
         self.to_yaml()
+
+        try:
+            subprocess.run(
+                ['git', 'add', str(self.yaml_path)],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ['git', 'commit', '-m', f'Update build_history for {self.id}'],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ['git', 'push', 'origin', 'main'],
+                check=True, capture_output=True, text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"Git operation failed for {self.yaml_path}:\n{e.stderr}. Please push the updated yaml manually, so upstream `build_history` is updated."
+            ) from e
 
 
 
