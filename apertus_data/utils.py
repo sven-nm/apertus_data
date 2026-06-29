@@ -36,7 +36,7 @@ def log_to_file(logs_dir: Path, name: str) -> Iterator[Path]:
     """Attach a timestamped FileHandler to ``ROOT_LOGGER`` for the context's lifetime."""
     logs_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-    log_path = logs_dir / f'{name}_{timestamp}.log'
+    log_path = logs_dir / f'{timestamp}_{name}.log'
 
     handler = logging.FileHandler(log_path, encoding='utf-8')
     handler.setFormatter(ROOT_FORMATTER)

@@ -15,7 +15,7 @@ from jsonschema import ValidationError, validate
 from apertus_data import build
 from apertus_data import constants as cs
 from apertus_data import utils
-from apertus_data.utils import get_logger
+from apertus_data.utils import get_logger, log_to_file
 
 logger = get_logger(__name__)
 
@@ -125,77 +125,78 @@ class Dataset:
             force: If True, wipe ``self.data_dir`` and re-run even when the
                 dataset already appears built at the requested commit.
         """
-        source_id = getattr(self, 'source_dataset', None)
-        if source_id:
-            source = Dataset.from_id(source_id)
-            if not source._is_already_built():
-                logger.info("Building source dataset %r before %r", source_id, self.id)
-                source.build(force=False)
+        with log_to_file(self.logs_dir, name=f'{self.id}_main'):
+            source_id = getattr(self, 'source_dataset', None)
+            if source_id:
+                source = Dataset.from_id(source_id)
+                if not source._is_already_built():
+                    logger.info("Building source dataset %r before %r", source_id, self.id)
+                    source.build(force=False)
 
-        req = getattr(self, 'build_requirements', None) or {}
-        url, commit = req.get('build_script_url'), req.get('build_script_commit')
-        if not url or not commit:
-            raise AttributeError(
-                f"Dataset {self.id!r} has no build_script_url/commit in build_requirements."
+            req = getattr(self, 'build_requirements', None) or {}
+            url, commit = req.get('build_script_url'), req.get('build_script_commit')
+            if not url or not commit:
+                raise AttributeError(
+                    f"Dataset {self.id!r} has no build_script_url/commit in build_requirements."
+                )
+
+            main_fn = build.prepare_builder(url, commit, yaml_path=self.yaml_path)
+
+            if not force and self._is_already_built():
+                raise ValueError(
+                    f"Dataset {self.id} is already built at {self.data_dir}. "
+                    f"Use force=True to rebuild."
+                )
+
+            if force and self.data_dir.exists():
+                logger.warning("force=True - removing %s", self.data_dir)
+                shutil.rmtree(self.root_dir)
+                self.root_dir.mkdir(parents=True, exist_ok=True)
+
+            build.run_builder(
+                main_fn,
+                output_dir=self.data_dir,
+                logs_dir=self.logs_dir,
+                dataset=self,
             )
 
-        main_fn = build.prepare_builder(url, commit)
-
-        if not force and self._is_already_built():
-            raise ValueError(
-                f"Dataset {self.id} is already built at {self.data_dir}. "
-                f"Use force=True to rebuild."
+            # Hash the dataset files
+            utils.compute_and_write_files_hashes(
+                input_dir=self.data_dir,
+                output_dir=self.hashes_dir,
+                filename_patterns=['*' + f for f in self.formats],
             )
 
-        if force and self.data_dir.exists():
-            logger.warning("force=True - removing %s", self.data_dir)
-            shutil.rmtree(self.data_dir)
-            self.data_dir.mkdir(parents=True, exist_ok=True)
-
-        build.run_builder(
-            main_fn,
-            output_dir=self.data_dir,
-            logs_dir=self.logs_dir,
-            dataset=self,
-        )
-
-        # Hash the dataset files
-        utils.compute_and_write_files_hashes(
-            input_dir=self.data_dir,
-            output_dir=self.hashes_dir,
-            filename_patterns=['*' + f for f in self.formats],
-        )
-
-        # Single hash for the whole dataset (digest of the per-file hashes)
-        dataset_hash = utils.compute_directory_hash(
-            input_dir=self.hashes_dir,
-            output_path=self.hashes_dir / f'{self.id}.hash',
-        )
-
-        self.build_history.append({
-            'datetime': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-            'hash': dataset_hash,
-        })
-
-        self.to_yaml()
-
-        try:
-            subprocess.run(
-                ['git', 'add', str(self.yaml_path)],
-                check=True, capture_output=True, text=True,
+            # Single hash for the whole dataset (digest of the per-file hashes)
+            dataset_hash = utils.compute_directory_hash(
+                input_dir=self.hashes_dir,
+                output_path=self.hashes_dir / f'{self.id}.hash',
             )
-            subprocess.run(
-                ['git', 'commit', '-m', f'Update build_history for {self.id}'],
-                check=True, capture_output=True, text=True,
-            )
-            subprocess.run(
-                ['git', 'push', 'origin', 'main'],
-                check=True, capture_output=True, text=True,
-            )
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Git operation failed for {self.yaml_path}:\n{e.stderr}. Please push the updated yaml manually, so upstream `build_history` is updated."
-            ) from e
+
+            self.build_history.append({
+                'datetime': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+                'hash': dataset_hash,
+            })
+
+            self.to_yaml()
+
+            try:
+                subprocess.run(
+                    ['git', 'add', str(self.yaml_path)],
+                    check=True, capture_output=True, text=True,
+                )
+                subprocess.run(
+                    ['git', 'commit', '-m', f'Update build_history for {self.id}'],
+                    check=True, capture_output=True, text=True,
+                )
+                subprocess.run(
+                    ['git', 'push', 'origin', 'main'],
+                    check=True, capture_output=True, text=True,
+                )
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(
+                    f"Git operation failed for {self.yaml_path}:\n{e.stderr}. Please push the updated yaml manually, so upstream `build_history` is updated."
+                ) from e
 
 
 

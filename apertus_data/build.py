@@ -19,14 +19,13 @@ import inspect
 import subprocess
 import sys
 import re
-import tempfile
 from pathlib import Path
 from typing import Callable
 
 import requests
 
 from apertus_data import constants as cs
-from apertus_data.utils import get_logger, log_to_file
+from apertus_data.utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -128,19 +127,20 @@ def _git(*args: str) -> subprocess.CompletedProcess:
         capture_output=True, text=True, check=False,
     )
 
-def verify_local_script_at_commit(url: str, commit: str) -> Path:
-    """Ensure the returned script matches the recorded commit.
+def verify_local_script_at_commit(url: str, commit: str, yaml_path: Path | None = None) -> Path:
+    """Ensure the working-tree script is byte-for-byte identical to the pinned commit.
 
-    Strategy:
-    - Derive the local path from the URL.
-    - Resolve the file's most recent commit. If it matches ``commit``, return
-      the local path as-is.
-    - Otherwise look ``commit`` up in the file's history; if absent, raise.
-    - If present, read the file content at that commit via ``git show`` and
-      write it to a temp file, leaving the working tree and index untouched.
+    Reads the file content at ``commit`` via ``git show`` and compares it to the
+    working-tree file (including any uncommitted edits).  If they differ, raises
+    a :class:`RuntimeError` that explains the three remediation steps.
+
+    Args:
+        url: GitHub URL of the build script.
+        commit: The pinned commit hash recorded in the dataset YAML.
+        yaml_path: Absolute path to the dataset YAML, used in the error message.
 
     Returns:
-        Path to the commit-aligned script (local file or a temp copy).
+        Path to the local (working-tree) script, verified to match ``commit``.
     """
     relative_path = parse_build_script_url(url)
     local_path = cs.PROJECT_ROOT / relative_path
@@ -157,33 +157,32 @@ def verify_local_script_at_commit(url: str, commit: str) -> Path:
     if _git('ls-files', '--error-unmatch', '--', relative_path).returncode != 0:
         raise RuntimeError(f"Build script {relative_path} is not tracked by git.")
 
-    current = _git('log', '-1', '--pretty=format:%H', '--', relative_path).stdout.strip()
-    if current == commit:
-        logger.info("✅ Local %s already at recorded commit %s", relative_path, commit[:7])
-        return local_path
-
-    logger.warning(
-        "Local %s is at %s, not the recorded %s; searching file history…",
-        relative_path, current[:7] or '<none>', commit[:7],
-    )
-    history = _git('log', '--pretty=format:%H', '--', relative_path).stdout.split()
-    if commit not in history:
-        raise RuntimeError(
-            f"Recorded commit {commit[:7]} not found in history of {relative_path}. "
-            f"History tip: {current[:7] or '<none>'}."
-        )
-
-    logger.info("📖 Reading %s @ %s via git show", relative_path, commit[:7])
     result = _git('show', f'{commit}:{relative_path}')
     if result.returncode != 0:
         raise RuntimeError(
-            f"git show {commit[:7]}:{relative_path} failed: {result.stderr.strip()}"
+            f"Could not read {relative_path} at pinned commit {commit[:7]} from git "
+            f"(have you fetched it?): {result.stderr.strip()}"
         )
 
-    tmp_path = Path(tempfile.mkdtemp()) / local_path.name
-    tmp_path.write_text(result.stdout)
-    logger.info("✅ Script written to temp file %s", tmp_path)
-    return tmp_path
+    if local_path.read_text() != result.stdout:
+        yaml_abs = yaml_path or '<dataset-yaml-path>'
+        raise RuntimeError(
+            f"The local build script '{relative_path}' does not match the pinned "
+            f"commit {commit[:7]}.\n\n"
+            f"This means the script you are about to run differs from the version "
+            f"recorded in the dataset YAML.  To fix this:\n\n"
+            f"  1. Commit your build script changes and push to main:\n"
+            f"       git commit {local_path} -m 'Update build script'\n"
+            f"       git push origin main\n\n"
+            f"  2. Copy the new commit hash and update build_requirements.build_script_commit "
+            f"in the dataset YAML.\n\n"
+            f"  3. Commit and push the updated YAML:\n"
+            f"       git commit {yaml_abs} -m 'Pin build script to new commit'\n"
+            f"       git push origin main"
+        )
+
+    logger.info("✅ Local %s matches pinned commit %s", relative_path, commit[:7])
+    return local_path
 
 
 def load_main(script_path: Path) -> BuilderFn:
@@ -201,7 +200,7 @@ def load_main(script_path: Path) -> BuilderFn:
     return module.main
 
 
-def prepare_builder(url: str, commit: str) -> BuilderFn:
+def prepare_builder(url: str, commit: str, yaml_path: Path | None = None) -> BuilderFn:
     """Verify, load, and validate the builder ``main`` for ``url`` at ``commit``.
 
     Composition of :func:`verify_remote_script`,
@@ -209,7 +208,7 @@ def prepare_builder(url: str, commit: str) -> BuilderFn:
     :func:`validate_builder_signature`. Returns the validated ``main`` callable.
     """
     verify_remote_script(url, commit)
-    script_path = verify_local_script_at_commit(url, commit)
+    script_path = verify_local_script_at_commit(url, commit, yaml_path=yaml_path)
     main_fn = load_main(script_path)
     validate_builder_signature(main_fn)
     return main_fn
@@ -233,10 +232,9 @@ def run_builder(
     output_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    with log_to_file(logs_dir, name=name) as log_path:
-        logger.info("▶️ Running builder %r → %s", name, output_dir)
-        func(output_dir=output_dir, logs_dir=logs_dir, dataset=dataset, **kwargs)
-        logger.info("◀️ Builder %r finished", name)
+    logger.info("▶️ Running builder %r → %s", name, output_dir)
+    func(output_dir=output_dir, logs_dir=logs_dir, dataset=dataset, **kwargs)
+    logger.info("◀️ Builder %r finished", name)
 
     if not any(output_dir.iterdir()):
         raise RuntimeError(f"Builder {name!r} produced no files in {output_dir}.")

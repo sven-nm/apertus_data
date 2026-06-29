@@ -2,6 +2,7 @@
 from apertus_data.dataset import Dataset
 from pathlib import Path
 
-dataset = Dataset.from_id('starcoderdata___9fc30b5')
+if __name__ == '__main__':
+    dataset = Dataset.from_id('xet_test___5bc987c')
 
-dataset.build(force=False)
+    dataset.build(force=True)
