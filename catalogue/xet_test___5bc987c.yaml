@@ -8,7 +8,7 @@ build_history:
 - datetime: '2026-06-29T10:57:03+00:00'
   hash: 0c3b02b5
 build_requirements:
-  build_script_commit: a7ba9e22ba94c57253b70f9e53ba18e9abb08d14
+  build_script_commit: 88037a4072ab8a238f5d2d45984313f74cc7820f
   build_script_url: https://github.com/sven-nm/apertus_data/blob/main/builders/default_hf_download.py
   source_datasets_ids: []
 data_dir: /Users/sven/Desktop/datasets_raw/xet_test___5bc987c/data
