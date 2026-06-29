@@ -7,6 +7,8 @@ build_history:
   hash: 26eb04d6
 - datetime: '2026-06-29T10:57:03+00:00'
   hash: 0c3b02b5
+- datetime: '2026-06-29T11:19:28+00:00'
+  hash: 0c3b02b5
 build_requirements:
   build_script_commit: 88037a4072ab8a238f5d2d45984313f74cc7820f
   build_script_url: https://github.com/sven-nm/apertus_data/blob/main/builders/default_hf_download.py
